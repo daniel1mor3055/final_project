@@ -57,14 +57,16 @@ class SignalGenerator:
         return generated_signal
 
     def _add_failure_trans(self, signal_with_load_transients):
+        # TODO maybe its smarter to determine the number of samples of the transients based on our sample rate/ #samples
         fail_trans_indices = np.random.randint(MIN_FAILURE_TRANS_SAMPLES, MAX_FAILURE_TRANS_SAMPLES)
         fail_trans_start_index = np.random.randint(GAP_FROM_START_END_TRANS_SAMPLES,
-                                                   self._total_num_samples - GAP_FROM_START_END_TRANS_SAMPLES)
+                                                   self._total_num_samples - fail_trans_indices - GAP_FROM_START_END_TRANS_SAMPLES)
         fail_trans_end_index = fail_trans_start_index + fail_trans_indices
         self._add_noise_to_signal(signal_with_load_transients, self.fail_trans_noise_params, fail_trans_start_index,
                                   fail_trans_end_index)
 
-    def _add_noise_to_signal(self, signal, noise_params, start_index=None, end_index=None):
+    @staticmethod
+    def _add_noise_to_signal(signal, noise_params, start_index=None, end_index=None):
         start_index, end_index = start_index or 0, end_index or len(signal)
         mean, var = noise_params['mean'], noise_params['var']
 
@@ -95,11 +97,11 @@ class SignalGenerator:
             optional_diff_indices = [np.random.randint(self._total_num_samples) for i in
                                      range(self.num_regular_transients)]
             optional_diff_indices.sort()
-            break_indices_valid = self.verify_indices(optional_diff_indices)
+            break_indices_valid = self._verify_indices(optional_diff_indices)
 
         return optional_diff_indices
 
-    def verify_indices(self, lst_indices_to_verify):
+    def _verify_indices(self, lst_indices_to_verify):
         min_samples_in_interval = self._total_num_samples // \
                                   (self.num_regular_transients + MIN_SAMPLES_IN_INTERVAL_LIMITER)
         lst_indices_to_verify.insert(0, 0)
@@ -115,12 +117,12 @@ class SignalGenerator:
         return all_intervals_are_valid and all_indices_are_different
 
     def _create_clean_signals(self):
+        # TODO in this way, most of our signals will look pretty much the same. Need to ask Yuval about common behaviors
         lst_clean_signals = list()
         for i in range(self.num_regular_transients + 1):
             amplitudes_diff_harmonics = self._extract_amplitudes_with_respect_to_harmonics()
 
             multi_signal = MultiSignal.from_params_lists(amplitudes_diff_harmonics, self._possible_frequencies)
-            print(multi_signal)
             multi_signal_evaluated = multi_signal.evaluate(self.duration, self.samples_per_second)
             lst_clean_signals.append(multi_signal_evaluated)
 
@@ -228,16 +230,22 @@ class SignalGeneratorNoiseBuilder(SignalGeneratorBuilder):
     def __init__(self, signal_generator):
         # Note: Noise is gaussian by default
         super().__init__(signal_generator)
-        signal_generator.noise_params = {
-            'mean': None,
-            'var': None,
-        }
 
     def mean(self, mean):
+        if not self.signal_generator.noise_params:
+            self.signal_generator.noise_params = {
+                'mean': None,
+                'var': None,
+            }
         self.signal_generator.noise_params['mean'] = mean
         return self
 
     def var(self, var):
+        if not self.signal_generator.noise_params:
+            self.signal_generator.noise_params = {
+                'mean': None,
+                'var': None,
+            }
         self.signal_generator.noise_params['var'] = var
         return self
 

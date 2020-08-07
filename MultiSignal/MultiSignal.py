@@ -24,8 +24,8 @@ class MultiSignal:
 
         return multi_signals
 
-    def add_signal(self, amplitude, frequency):
-        signal_to_add = Signal(amplitude, frequency)
+    def add_signal(self, amplitude, frequency, phase=0):
+        signal_to_add = Signal(amplitude, frequency, phase)
         self.signals.append(signal_to_add)
 
     def evaluate(self, duration, samples_per_second):

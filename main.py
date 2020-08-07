@@ -11,7 +11,7 @@ if __name__ == '__main__':
         mean(0). \
         var(0.1). \
         with_sampling_params. \
-        duration(2). \
+        duration(3). \
         samples_per_second(150). \
         with_transient_params. \
         num_reg_trans(0). \
