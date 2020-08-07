@@ -1,4 +1,4 @@
-from SignalGenerator.signal_generator_constants import NUM_OF_DRAWS_AMPLITUDES_OF_DIFF_HARMONICS
+from SignalGenerator.signal_generator_constants import NUM_DRAWS_AMPLITUDES_DIFF_HARMONICS
 from SignalGenerator.signal_generator_exceptions import SampleRateError, MissingPropertiesError
 from MultiSignal.MultiSignal import MultiSignal
 import numpy as np
@@ -10,8 +10,8 @@ class SignalGenerator:
         self.base_frequency = None
         self.num_diff_harmonics = None
         self.noise_params = None
-        self.duration = 0
-        self.samples_per_second = 0
+        self.duration = None
+        self.samples_per_second = None
         self.num_regular_transients = None
         self.num_failure_transients = None
         self._possible_frequencies = None
@@ -38,40 +38,38 @@ class SignalGenerator:
         if missing_properties:
             raise MissingPropertiesError(missing_properties)
 
-        lst_of_clean_signals = self._create_clean_signals()
-        return lst_of_clean_signals
+        lst_clean_signals = self._create_clean_signals()
+        return lst_clean_signals
 
     def _create_clean_signals(self):
-        lst_of_different_signals = list()
+        lst_clean_signals = list()
         for i in range(self.num_regular_transients + 1):
-            amplitudes_of_diff_harmonics = self._extract_amplitudes_with_respect_to_harmonics()
+            amplitudes_diff_harmonics = self._extract_amplitudes_with_respect_to_harmonics()
 
-            multi_signal = MultiSignal.from_params_lists(amplitudes_of_diff_harmonics, self._possible_frequencies)
-            print(multi_signal)
-            # multi_sine_waveform = _multi_sine_waveforms(amplitudes=amplitudes, frequencies=frequencies,
-            #                                             duration=duration, samples_per_second=samples_per_second)
-            # lst_of_different_signals.append(multi_sine_waveform)
+            multi_signal = MultiSignal.from_params_lists(amplitudes_diff_harmonics, self._possible_frequencies)
+            multi_signal_evaluated = multi_signal.evaluate(self.duration, self.samples_per_second)
+            lst_clean_signals.append(multi_signal_evaluated)
 
-        return lst_of_different_signals
+        return lst_clean_signals
 
     def _extract_amplitudes_with_respect_to_harmonics(self):
         mean, var = self.noise_params['mean'], self.noise_params['var']
-        counts_of_different_harmonics = np.zeros(self.num_diff_harmonics)
-        draws = np.abs(np.random.normal(mean, var, size=NUM_OF_DRAWS_AMPLITUDES_OF_DIFF_HARMONICS))
+        counts_different_harmonics = np.zeros(self.num_diff_harmonics)
+        draws = np.abs(np.random.normal(mean, var, size=NUM_DRAWS_AMPLITUDES_DIFF_HARMONICS))
         for draw in draws:
-            counts_of_different_harmonics[int(draw / (var / 2))] += 1
+            counts_different_harmonics[int(draw / (var / 2))] += 1
 
-        count_of_base_amplitude = counts_of_different_harmonics[0]
-        amplitudes_of_diff_harmonics = [count * self.base_amplitude / count_of_base_amplitude for count in
-                                        counts_of_different_harmonics]
+        count_base_amplitude = counts_different_harmonics[0]
+        amplitudes_diff_harmonics = [count * self.base_amplitude / count_base_amplitude for count in
+                                     counts_different_harmonics]
 
-        return amplitudes_of_diff_harmonics
+        return amplitudes_diff_harmonics
 
     def _get_missing_properties(self):
         missing_properties = [attr for attr in dir(self) if
                               not attr.startswith('__') and
                               not attr.startswith('_') and
-                              self.__getattribute__(attr) in (None, 0)]
+                              self.__getattribute__(attr) is None]
         return missing_properties
 
 
@@ -133,15 +131,17 @@ class SignalGeneratorSamplingBuilder(SignalGeneratorBuilder):
         super().__init__(signal_generator)
 
     def duration(self, duration):
-        self.signal_generator.duration = float(duration)
-        if not (self.signal_generator.duration * self.signal_generator.samples_per_second).is_integer():
-            raise SampleRateError
+        self.signal_generator.duration = duration
+        if self.signal_generator.samples_per_second:
+            if not float(self.signal_generator.duration * self.signal_generator.samples_per_second).is_integer():
+                raise SampleRateError
         return self
 
     def samples_per_second(self, samples_per_second):
-        self.signal_generator.samples_per_second = float(samples_per_second)
-        if not (self.signal_generator.duration * self.signal_generator.samples_per_second).is_integer():
-            raise SampleRateError
+        self.signal_generator.samples_per_second = samples_per_second
+        if self.signal_generator.duration:
+            if not float(self.signal_generator.duration * self.signal_generator.samples_per_second).is_integer():
+                raise SampleRateError
         return self
 
 

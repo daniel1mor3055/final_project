@@ -38,7 +38,7 @@ if __name__ == '__main__':
         duration(15). \
         samples_per_second(1). \
         with_transient_params. \
-        num_reg_trans(1). \
+        num_reg_trans(0). \
         num_fail_trans(1).build()
 
     print(signal_generator.generate())
