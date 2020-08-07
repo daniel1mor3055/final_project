@@ -1,16 +1,23 @@
-# This is a sample Python script.
+from SignalGenerator.SignalGenerator import SignalGeneratorBuilder
+from SignalPlotter.SignalPlotter import SignalPlotter
 
-# Press Alt+R to execute it or replace it with your code.
-# Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
-
-
-def print_hi(name):
-    # Use a breakpoint in the code line below to debug your script.
-    print(f'Hi, {name}')  # Press Ctrl+F8 to toggle the breakpoint.
-
-
-# Press the green button in the gutter to run the script.
 if __name__ == '__main__':
-    print_hi('PyCharm')
+    signal_generator = SignalGeneratorBuilder(). \
+        with_base_params. \
+        base_amplitude(5). \
+        base_frequency(15). \
+        num_diff_harmonics(10). \
+        with_noise_params. \
+        mean(0). \
+        var(0.1). \
+        with_sampling_params. \
+        duration(2). \
+        samples_per_second(150). \
+        with_transient_params. \
+        num_reg_trans(0). \
+        mean_fail_trans(0). \
+        var_fail_trans(3).build()
 
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/
+    generated_signal = signal_generator.generate()
+    SignalPlotter.plot_signal(generated_signal,
+                              'Multi sine wave with single load transient and also single failure transient')
