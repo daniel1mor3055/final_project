@@ -1,5 +1,5 @@
 from MultiSignal.multi_signal_exceptions import AmplitudesFrequenciesMatchError
-from Signal.Signal import SignalBuilder
+from Signal.Signal import Signal
 
 
 class MultiSignal:
@@ -25,8 +25,20 @@ class MultiSignal:
         return multi_signals
 
     def add_signal(self, amplitude, frequency):
-        signal_to_add = SignalBuilder().with_base_params.amplitude(amplitude).base_freq(frequency)
+        signal_to_add = Signal(amplitude, frequency)
         self.signals.append(signal_to_add)
+
+    def evaluate(self, duration, samples_per_second):
+        # TODO make sure that duration*samples_per_seconds is integer is being called before
+
+        evaluated_signal = None
+        for signal in self.signals:
+            if evaluated_signal is None:
+                evaluated_signal = signal.evaluate(duration, samples_per_second)
+            else:
+                evaluated_signal += signal.evaluate(duration, samples_per_second)
+
+        return evaluated_signal
 
     def __str__(self):
         signals_repr = '\n'.join(

@@ -1,51 +1,56 @@
+import numpy as np
+
+
 class Signal:
-    def __init__(self):
-        self.amplitude = None
-        self.frequency = None
+    def __init__(self, amplitude, frequency, phase=0):
+        self.amplitude = amplitude
+        self.frequency = frequency
+        self.phase = phase
+
+    def evaluate(self, duration, samples_per_second):
+        # TODO make sure that duration*samples_per_seconds is integer is being called before
+        sampling_times = np.array([i / samples_per_second for i in range(duration * samples_per_second)])
+        evaluated_signal = self.amplitude * np.sin(2 * np.pi * self.frequency * sampling_times)
+        return evaluated_signal
 
     def __str__(self):
         return 'Signal is composed of:\n' + \
                'Base params:\n' + \
                f'\tamplitude={self.amplitude}\n' + \
-               f'\tfrequency={self.frequency}\n'
+               f'\tfrequency={self.frequency}\n' + \
+               f'\tphase={self.phase}\n'
 
-
-class SignalBuilder:
-    def __init__(self, signal=None):
-        if signal is None:
-            self.signal = Signal()
-        else:
-            self.signal = signal
-
-    @property
-    def with_base_params(self):
-        return SignalBaseBuilder(self.signal)
-
-    # @property
-    # def works(self):
-    #     return SignalJobBuilder(self.signal)
-
-    def build(self):
-        return self.signal
-
-    def __str__(self):
-        return self.signal.__str__()
-
-
-class SignalBaseBuilder(SignalBuilder):
-    def __init__(self, signal):
-        super().__init__(signal)
-
-    def base_freq(self, frequency):
-        self.signal.frequency = frequency
-        return self
-
-    def amplitude(self, amplitude):
-        self.signal.amplitude = amplitude
-        return self
-
-    def phase(self, phase):
-        raise NotImplementedError
+#
+# class SignalBuilder:
+#     def __init__(self, signal=None):
+#         if signal is None:
+#             self.signal = Signal()
+#         else:
+#             self.signal = signal
+#
+#     @property
+#     def with_base_params(self):
+#         return SignalBaseBuilder(self.signal)
+#
+#     def __str__(self):
+#         return self.signal.__str__()
+#
+#
+# class SignalBaseBuilder(SignalBuilder):
+#     def __init__(self, signal):
+#         super().__init__(signal)
+#
+#     def base_freq(self, frequency):
+#         self.signal.frequency = frequency
+#         return self
+#
+#     def amplitude(self, amplitude):
+#         self.signal.amplitude = amplitude
+#         return self
+#
+#     def phase(self, phase):
+#         self.signal.phase = phase
+#         return self
 #
 # class PersonJobBuilder(PersonBuilder):
 #     def __init__(self, person):
