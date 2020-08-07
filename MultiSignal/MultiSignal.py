@@ -1,13 +1,32 @@
-class Signal:
+from Signal.signal_exceptions import SampleRateError
+from MultiSignal.multi_signal_exceptions import AmplitudesFrequenciesMatchError
+from Signal.Signal import SignalBuilder
+
+
+class MultiSignals:
     def __init__(self):
-        self.computed_signal = None
-        self.amplitude = None
-        self.frequency = None
-        self.duration = None
-        self.samples_per_second = None
+        self.signals = []
+        self.duration =0
+        self.samples_per_seconds=0
+
+    @classmethod
+    def from_signal(cls, signals):
+        multi_signals = cls()
+        
+        multi_signals.signals = signals
+        return multi_signals
+
+    @classmethod
+    def from_params_lists(cls, amplitudes, frequencies, duration, samples_per_seconds):
+        if len(amplitudes) != len(frequencies):
+            raise AmplitudesFrequenciesMatchError
+
+        signals = []
+
+    def add_signal(self,amplitude,frequency,):
 
     def __str__(self):
-        raise NotImplementedError
+        return '\n'.join([signal.__str__() for signal in self.signals])
 
 
 class SignalBuilder:
@@ -21,12 +40,15 @@ class SignalBuilder:
     def with_base_params(self):
         return SignalBaseBuilder(self.signal)
 
-    @property
-    def works(self):
-        return SignalJobBuilder(self.signal)
+    # @property
+    # def works(self):
+    #     return SignalJobBuilder(self.signal)
 
     def build(self):
         return self.signal
+
+    def __str__(self):
+        return self.signal.__str__()
 
 
 class SignalBaseBuilder(SignalBuilder):
@@ -42,11 +64,15 @@ class SignalBaseBuilder(SignalBuilder):
         return self
 
     def duration(self, duration):
-        self.signal.duration = duration
+        self.signal.duration = float(duration)
+        if not (self.signal.duration * self.signal.samples_per_second).is_integer():
+            raise SampleRateError
         return self
 
     def samples_per_second(self, samples_per_second):
-        self.signal.samples_per_second = samples_per_second
+        self.signal.samples_per_second = float(samples_per_second)
+        if not (self.signal.duration * self.signal.samples_per_second).is_integer():
+            raise SampleRateError
         return self
 #
 # class PersonJobBuilder(PersonBuilder):
