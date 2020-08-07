@@ -120,6 +120,7 @@ class SignalGenerator:
             amplitudes_diff_harmonics = self._extract_amplitudes_with_respect_to_harmonics()
 
             multi_signal = MultiSignal.from_params_lists(amplitudes_diff_harmonics, self._possible_frequencies)
+            print(multi_signal)
             multi_signal_evaluated = multi_signal.evaluate(self.duration, self.samples_per_second)
             lst_clean_signals.append(multi_signal_evaluated)
 
