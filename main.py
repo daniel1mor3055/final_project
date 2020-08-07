@@ -1,31 +1,7 @@
-from Signal.Signal import Signal
-from MultiSignal.MultiSignal import MultiSignal
 from SignalGenerator.SignalGenerator import SignalGeneratorBuilder
+from SignalPlotter.SignalPlotter import SignalPlotter
 
 if __name__ == '__main__':
-    amplitudes = [3, 4]
-    base_freqs = [5, 6]
-    signal = Signal(3, 5)
-    signal1 = Signal(4, 6)
-    multi_signals = MultiSignal.from_params_lists(amplitudes, base_freqs)
-
-    # base_params = {
-    #     base_freq,
-    #     num_diff_harmonics,
-    # }
-    # noise_params = {
-    #     mean,
-    #     var,
-    # }
-    # sampling_params = {
-    #     duration,
-    #     samples_per_seconds,
-    # }
-    # transients_params = {
-    #     num_regular_transients,
-    #     num_failure_transients,
-    # }
-
     signal_generator = SignalGeneratorBuilder(). \
         with_base_params. \
         base_amplitude(5). \
@@ -33,12 +9,15 @@ if __name__ == '__main__':
         num_diff_harmonics(10). \
         with_noise_params. \
         mean(0). \
-        var(1). \
+        var(0.1). \
         with_sampling_params. \
-        duration(15). \
-        samples_per_second(1). \
+        duration(2). \
+        samples_per_second(150). \
         with_transient_params. \
         num_reg_trans(0). \
-        num_fail_trans(1).build()
+        mean_fail_trans(0). \
+        var_fail_trans(3).build()
 
-    print(signal_generator.generate())
+    generated_signal = signal_generator.generate()
+    SignalPlotter.plot_signal(generated_signal,
+                              'Multi sine wave with single load transient and also single failure transient')

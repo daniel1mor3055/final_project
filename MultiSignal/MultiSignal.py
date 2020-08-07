@@ -29,8 +29,6 @@ class MultiSignal:
         self.signals.append(signal_to_add)
 
     def evaluate(self, duration, samples_per_second):
-        # TODO make sure that duration*samples_per_seconds is integer is being called before
-
         evaluated_signal = None
         for signal in self.signals:
             if evaluated_signal is None:
