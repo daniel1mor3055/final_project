@@ -28,13 +28,14 @@ if __name__ == '__main__':
 
     signal_generator = SignalGeneratorBuilder(). \
         with_base_params. \
-        base_frequency(40). \
+        base_amplitude(5). \
+        base_frequency(15). \
         num_diff_harmonics(10). \
         with_noise_params. \
         mean(0). \
         var(1). \
         with_sampling_params. \
-        duration(2). \
+        duration(15). \
         samples_per_second(1). \
         with_transient_params. \
         num_reg_trans(1). \
