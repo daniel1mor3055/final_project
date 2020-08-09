@@ -1,6 +1,5 @@
 from WaveletsManager.wavelets_manager_constats import (
     SIGNAL_EXTENSIONS,
-    WAVELET_FAMILIES
 )
 
 
@@ -16,5 +15,5 @@ class SignalExtensionError(Exception):
 
 
 class WaveletFamilyError(Exception):
-    def __init__(self, message='Please provide wavelet family from the following options:\n\t'):
-        super().__init__(message + '\n\t'.join(WAVELET_FAMILIES))
+    def __init__(self, wavelet_families, message='Please provide wavelet family from the following options:\n\t'):
+        super().__init__(message + '\n\t'.join(wavelet_families))

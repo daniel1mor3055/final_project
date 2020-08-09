@@ -4,39 +4,45 @@ from pywt import (
     wavedec,
     waverec,
     families,
+    wavelist,
 )
 
-from WaveletsManager.wavelets_manager_constats import SIGNAL_EXTENSIONS, WAVELET_FAMILIES, CSS_COLORS
+from WaveletsManager.wavelets_manager_constats import SIGNAL_EXTENSIONS, CSS_COLORS
 from WaveletsManager.wavelets_manager_exceptions import ReconstructionError, SignalExtensionError, WaveletFamilyError
 
 
 class WaveletsManager:
     def __init__(self, signal):
         self.signal = signal
-        self.plot_coefficients = None
+        self.coefficients = None
         self.wavelets_family = None
         self.signal_extension = None
         self.decompose_level = None
-        self._reconstructed_signal = None
 
     def decompose(self, signal_extension='symmetric', wavelets_family='haar', decompose_level=3):
         self.signal_extension, self.wavelets_family, self.decompose_level = signal_extension, wavelets_family, decompose_level
         if signal_extension not in SIGNAL_EXTENSIONS:
             raise SignalExtensionError
 
-        if wavelets_family not in WAVELET_FAMILIES:
-            raise WaveletFamilyError
+        if wavelets_family not in wavelist():
+            raise WaveletFamilyError(wavelist())
 
         coefficients = wavedec(data=self.signal, wavelet=wavelets_family, mode=signal_extension, level=decompose_level)
         self.coefficients = coefficients.copy()
         return coefficients
 
     def reconstruct(self):
-        required_properties = [self.coefficients, self.wavelets_family, self.signal_extension]
+        return self._reconstruct(self.coefficients)
+
+    def reconstruct_with_coefficients(self, coefficients):
+        return self._reconstruct(coefficients)
+
+    def _reconstruct(self, coefficients):
+        required_properties = [coefficients, self.wavelets_family, self.signal_extension]
+
         if all(required_properties):
-            reconstructed_signal = waverec(coeffs=self.coefficients, wavelet=self.wavelets_family,
+            reconstructed_signal = waverec(coeffs=coefficients, wavelet=self.wavelets_family,
                                            mode=self.signal_extension)
-            self._reconstructed_signal = reconstructed_signal.copy()
             return reconstructed_signal
         else:
             raise ReconstructionError(required_properties)
@@ -45,12 +51,9 @@ class WaveletsManager:
     def get_available_families():
         return families()
 
-    def plot_summary(self):
-        if not self._reconstructed_signal:
-            self.reconstruct()
-
+    def plot_decompose_summary(self, show=True):
         length = len(self.signal)
-        reconstructed_signal = self._reconstructed_signal[:length]
+        reconstructed_signal = self.reconstruct()[:length]
 
         x_values = np.arange(length)
         num_plots = self.decompose_level + 3
@@ -82,7 +85,11 @@ class WaveletsManager:
         plt.xlabel('Samples')
         plt.ylabel('Amplitude')
         plt.title('Reconstructed Signal')
-        plt.show()
+        plt.savefig('summary.png')
+        if show:
+            plt.show()
+        else:
+            plt.close()
 
     def plot_coefficients(self):
         raise NotImplementedError

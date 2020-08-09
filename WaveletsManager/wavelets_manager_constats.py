@@ -1,20 +1,3 @@
-WAVELET_FAMILIES = [
-    'haar',
-    'db1',
-    'sym',
-    'coif',
-    'bior',
-    'rbio',
-    'dmey',
-    'gaus',
-    'mexh',
-    'morl',
-    'cgau',
-    'shan',
-    'fbsp',
-    'cmor'
-]
-
 SIGNAL_EXTENSIONS = [
     'zero',
     'constant',
