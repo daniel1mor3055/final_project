@@ -1,7 +1,9 @@
 import pywt
-import pywt.data
 import matplotlib.pyplot as plt
 import numpy as np
+import pywt.data
+
+
 
 
 matrix = pywt.dwt([1, 2, 3,4], 'db6')
