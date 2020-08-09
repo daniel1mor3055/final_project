@@ -18,16 +18,16 @@ import numpy as np
 
 class SignalGenerator:
     def __init__(self):
-        self.base_amplitude = None
+        self.base_amplitudes = None
         self.base_frequency = None
         self.num_diff_harmonics = None
         self.noise_params = None
         self.duration = None
         self.samples_per_second = None
-        self.num_regular_transients = None
         self.fail_trans_noise_params = None
         self._possible_frequencies = None
         self._total_num_samples = None
+        self._num_regular_transients = None
 
     def __str__(self):
         missing_properties = self._get_missing_properties()
@@ -36,12 +36,11 @@ class SignalGenerator:
 
         assigned_properties_repr = 'SignalGenerator has the following parameters:\n' + \
                                    f'\tbase frequency={self.base_frequency}\n' + \
-                                   f'\tbase amplitude={self.base_amplitude}\n' + \
+                                   f'\tbase amplitude={self.base_amplitudes}\n' + \
                                    f'\tnum of different harmonics={self.num_diff_harmonics}\n' + \
                                    f'\tnoise parameters={self.noise_params}\n' + \
                                    f'\tduration={self.duration}\n' + \
                                    f'\tsamples per seconds={self.samples_per_second}\n' + \
-                                   f'\tnum of regular transients={self.num_regular_transients}\n' + \
                                    f'\tfailure transients noise parameters={self.fail_trans_noise_params}\n'
 
         return assigned_properties_repr + (missing_properties_repr if missing_properties else '')
@@ -83,7 +82,7 @@ class SignalGenerator:
     def _determine_load_transients(self, break_indices_for_load_transients, lst_clean_signals):
         signal_with_load_transients = np.zeros(self._total_num_samples)
         start_index = 0
-        for i in range(self.num_regular_transients):
+        for i in range(self._num_regular_transients):
             signal_with_load_transients[start_index:break_indices_for_load_transients[i]] = \
                 lst_clean_signals[i][start_index:break_indices_for_load_transients[i]]
             start_index = break_indices_for_load_transients[i]
@@ -95,7 +94,7 @@ class SignalGenerator:
         optional_diff_indices = None
         while not break_indices_valid:
             optional_diff_indices = [np.random.randint(self._total_num_samples) for i in
-                                     range(self.num_regular_transients)]
+                                     range(self._num_regular_transients)]
             optional_diff_indices.sort()
             break_indices_valid = self._verify_indices(optional_diff_indices)
 
@@ -103,7 +102,7 @@ class SignalGenerator:
 
     def _verify_indices(self, lst_indices_to_verify):
         min_samples_in_interval = self._total_num_samples // \
-                                  (self.num_regular_transients + MIN_SAMPLES_IN_INTERVAL_LIMITER)
+                                  (self._num_regular_transients + MIN_SAMPLES_IN_INTERVAL_LIMITER)
         lst_indices_to_verify.insert(0, 0)
         lst_indices_to_verify.append(self._total_num_samples)
         all_intervals_are_valid = all(
@@ -119,8 +118,8 @@ class SignalGenerator:
     def _create_clean_signals(self):
         # TODO in this way, most of our signals will look pretty much the same. Need to ask Yuval about common behaviors
         lst_clean_signals = list()
-        for i in range(self.num_regular_transients + 1):
-            amplitudes_diff_harmonics = self._extract_amplitudes_with_respect_to_harmonics()
+        for i in range(self._num_regular_transients + 1):
+            amplitudes_diff_harmonics = self._extract_amplitudes_with_respect_to_harmonics(signal_index=i)
 
             multi_signal = MultiSignal.from_params_lists(amplitudes_diff_harmonics, self._possible_frequencies)
             multi_signal_evaluated = multi_signal.evaluate(self.duration, self.samples_per_second)
@@ -128,7 +127,7 @@ class SignalGenerator:
 
         return lst_clean_signals
 
-    def _extract_amplitudes_with_respect_to_harmonics(self):
+    def _extract_amplitudes_with_respect_to_harmonics(self, signal_index):
         mean, var = EXTRACT_AMPLITUDES_NOISE_PARAMS['mean'], EXTRACT_AMPLITUDES_NOISE_PARAMS['var']
         counts_different_harmonics = np.zeros(self.num_diff_harmonics)
         draws = np.abs(np.random.normal(mean, var, size=NUM_DRAWS_AMPLITUDES_DIFF_HARMONICS))
@@ -137,7 +136,7 @@ class SignalGenerator:
                 int(draw / ((MAX_DIST_IN_STANDARD_DEVIATION * var ** 0.5) / self.num_diff_harmonics))] += 1
 
         count_base_amplitude = counts_different_harmonics[0]
-        amplitudes_diff_harmonics = [count * self.base_amplitude / count_base_amplitude for count in
+        amplitudes_diff_harmonics = [count * self.base_amplitudes[signal_index] / count_base_amplitude for count in
                                      counts_different_harmonics]
 
         return amplitudes_diff_harmonics
@@ -170,7 +169,7 @@ class SignalGeneratorBuilder:
         return SignalGeneratorNoiseBuilder(self.signal_generator)
 
     @property
-    def with_transient_params(self):
+    def with_fail_transient_params(self):
         return SignalGeneratorTransientsBuilder(self.signal_generator)
 
     def build(self):
@@ -184,8 +183,9 @@ class SignalGeneratorBaseBuilder(SignalGeneratorBuilder):
     def __init__(self, signal_generator):
         super().__init__(signal_generator)
 
-    def base_amplitude(self, amplitude):
-        self.signal_generator.base_amplitude = amplitude
+    def base_amplitudes(self, amplitudes):
+        self.signal_generator.base_amplitudes = amplitudes
+        self.signal_generator._num_regular_transients = len(amplitudes) - 1
         return self
 
     def base_frequency(self, frequency):
@@ -253,10 +253,6 @@ class SignalGeneratorNoiseBuilder(SignalGeneratorBuilder):
 class SignalGeneratorTransientsBuilder(SignalGeneratorBuilder):
     def __init__(self, signal_generator):
         super().__init__(signal_generator)
-
-    def num_reg_trans(self, num_reg_trans):
-        self.signal_generator.num_regular_transients = num_reg_trans
-        return self
 
     def mean_fail_trans(self, mean):
         if not self.signal_generator.fail_trans_noise_params:

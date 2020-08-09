@@ -5,7 +5,7 @@ from WaveletsManager.WaveletsManager import WaveletsManager
 if __name__ == '__main__':
     signal_generator = SignalGeneratorBuilder(). \
         with_base_params. \
-        base_amplitude(5). \
+        base_amplitudes([5, 3]). \
         base_frequency(15). \
         num_diff_harmonics(10). \
         with_noise_params. \
@@ -14,8 +14,7 @@ if __name__ == '__main__':
         with_sampling_params. \
         duration(1). \
         samples_per_second(300). \
-        with_transient_params. \
-        num_reg_trans(0). \
+        with_fail_transient_params. \
         mean_fail_trans(0). \
         var_fail_trans(5).build()
 
