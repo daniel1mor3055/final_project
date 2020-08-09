@@ -213,7 +213,7 @@ class SignalGeneratorSamplingBuilder(SignalGeneratorBuilder):
             if not float(self.signal_generator.duration * self.signal_generator.samples_per_second).is_integer():
                 raise SampleRateError
             else:
-                self.signal_generator._total_num_samples = duration * self.signal_generator.samples_per_second
+                self.signal_generator._total_num_samples = int(duration * self.signal_generator.samples_per_second)
         return self
 
     def samples_per_second(self, samples_per_second):
@@ -222,7 +222,7 @@ class SignalGeneratorSamplingBuilder(SignalGeneratorBuilder):
             if not float(self.signal_generator.duration * self.signal_generator.samples_per_second).is_integer():
                 raise SampleRateError
             else:
-                self.signal_generator._total_num_samples = samples_per_second * self.signal_generator.duration
+                self.signal_generator._total_num_samples = int(samples_per_second * self.signal_generator.duration)
         return self
 
 
