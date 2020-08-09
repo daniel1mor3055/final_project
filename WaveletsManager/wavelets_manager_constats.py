@@ -1,6 +1,6 @@
 WAVELET_FAMILIES = [
     'haar',
-    'db',
+    'db1',
     'sym',
     'coif',
     'bior',
@@ -25,4 +25,19 @@ SIGNAL_EXTENSIONS = [
     'reflect',
     'antisymmetric',
     'antireflect'
+]
+
+CSS_COLORS = [
+    'black',
+    'crimson',
+    'fuchsia',
+    'purple',
+    'blue',
+    'steelblue',
+    'limegreen',
+    'goldenrod',
+    'darkorange',
+    'chocolate',
+    'red',
+    'lightcoral',
 ]
