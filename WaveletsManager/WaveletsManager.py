@@ -7,8 +7,10 @@ from pywt import (
     wavelist,
 )
 
-from WaveletsManager.wavelets_manager_constats import SIGNAL_EXTENSIONS, CSS_COLORS
+from SignalPlotter.SignalPlotter import SignalPlotter
+from WaveletsManager.wavelets_manager_constats import SIGNAL_EXTENSIONS, CSS_COLORS, TRANSIENT_DETECTOR_SENSITIVITY
 from WaveletsManager.wavelets_manager_exceptions import ReconstructionError, SignalExtensionError, WaveletFamilyError
+from global_constants import FREQ_DOMAIN_WINDOW_SIZE, TIME_DOMAIN_WINDOW_SIZE
 
 
 class WaveletsManager:
@@ -31,13 +33,9 @@ class WaveletsManager:
         self.coefficients = coefficients.copy()
         return coefficients
 
-    def reconstruct(self):
-        return self._reconstruct(self.coefficients)
+    def reconstruct(self, coefficients=None):
+        coefficients = coefficients or self.coefficients
 
-    def reconstruct_with_coefficients(self, coefficients):
-        return self._reconstruct(coefficients)
-
-    def _reconstruct(self, coefficients):
         required_properties = [coefficients, self.wavelets_family, self.signal_extension]
 
         if all(required_properties):
@@ -50,6 +48,47 @@ class WaveletsManager:
     @staticmethod
     def get_available_families():
         return families()
+
+    def _get_moving_average_high_freq(self, coefficients, window_size):
+        # Note that this function doesn't return exactly the moving average but first each value is squared
+        coefficients = coefficients or self.coefficients
+        # We divide by factor of 2 since our highest freq coefficients halved in size
+        # NOTE: If the transient is a long one, we will need a longer window_size
+        window_size = window_size or FREQ_DOMAIN_WINDOW_SIZE
+
+        highest_freq_coefficients = coefficients[-1]
+        moving_avg_kernel = np.ones(window_size)
+
+        abs_high_freq_coefficients = np.square(highest_freq_coefficients)
+        moving_average_high_freq = np.convolve(abs_high_freq_coefficients, moving_avg_kernel, mode='same')
+
+        return moving_average_high_freq
+
+    def is_transient_exist(self, coefficients=None, window_size=None):
+        moving_average_high_freq = self._get_moving_average_high_freq(coefficients, window_size)
+        return (np.mean(moving_average_high_freq) / np.max(moving_average_high_freq)) < TRANSIENT_DETECTOR_SENSITIVITY
+
+    def _extract_transient_interval(self, coefficients, window_size):
+        moving_average_high_freq = self._get_moving_average_high_freq(coefficients, window_size)
+        SignalPlotter.plot_signal(moving_average_high_freq, 'check', show=False)
+        transient_indices = np.where(
+            moving_average_high_freq > (np.max(moving_average_high_freq) - np.mean(moving_average_high_freq)))
+
+        transient_interval_in_time_domain = (transient_indices[0][0] * 2, transient_indices[0][-1] * 2)
+
+        return transient_interval_in_time_domain
+
+    def get_signal_before_after_transient(self, gap, coefficients=None, window_size=None):
+        transient_interval_in_time_domain = self._extract_transient_interval(coefficients, window_size)
+        print(f'extracted fail trans indices:\n{transient_interval_in_time_domain}')
+        signal_before = self.signal[
+                        transient_interval_in_time_domain[0] - gap - TIME_DOMAIN_WINDOW_SIZE:
+                        transient_interval_in_time_domain[0] - gap]
+        signal_after = self.signal[
+                       transient_interval_in_time_domain[1] + gap:
+                       transient_interval_in_time_domain[1] + gap + TIME_DOMAIN_WINDOW_SIZE]
+
+        return signal_before, signal_after
 
     def plot_decompose_summary(self, pathname=None, show=True):
         length = len(self.signal)

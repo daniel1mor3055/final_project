@@ -1,79 +1,66 @@
-from SignalGenerator.SignalGenerator import SignalGeneratorBuilder
-from SignalPlotter.SignalPlotter import SignalPlotter
-from WaveletsManager.WaveletsManager import WaveletsManager
 import numpy as np
 
+from SignalGenerator.SignalGenerator import SignalGeneratorBuilder
+from SignalPlotter.SignalPlotter import SignalPlotter
+from SignalSimilaritiesEstimator.SignalSimilaritiesEstimator import SignalSimilaritiesEstimator
+from WaveletsManager.WaveletsManager import WaveletsManager
+from global_constants import (
+    BASE_FREQUENCY,
+    SAMPLES_PER_SECOND
+)
+
 if __name__ == '__main__':
+    # Note that the num of base_amplitudes determines the number of load transients
     signal_generator = SignalGeneratorBuilder(). \
         with_base_params. \
         base_amplitudes([5, 3]). \
-        base_frequency(50). \
+        base_frequency(BASE_FREQUENCY). \
         num_diff_harmonics(10). \
         with_noise_params. \
         mean(0). \
         var(0.5). \
         with_sampling_params. \
         duration(2). \
-        samples_per_second(44100). \
+        samples_per_second(SAMPLES_PER_SECOND). \
         with_fail_transient_params. \
         mean_fail_trans(0). \
-        var_fail_trans(4).build()
+        var_fail_trans(0.5). \
+        max_failure_trans_samples(400). \
+        min_failure_trans_samples(200). \
+        gap_from_start_end_samples(200). \
+        with_load_transient_params. \
+        mean_load_trans(0). \
+        var_load_trans(3). \
+        samples_to_apply_noise(200).build()
 
     generated_signal = signal_generator.generate()
-
     wmanager_generated_signal = WaveletsManager(generated_signal)
     coefficients = wmanager_generated_signal.decompose(signal_extension='symmetric', wavelets_family='db4',
                                                        decompose_level=1)
     wmanager_generated_signal.plot_decompose_summary(show=False)
+    print(f'fail trans indices are:\n{signal_generator._fail_trans_indices}')
 
-    # coefficients[-1] = np.full(len(coefficients[-1]), np.median(coefficients[-1]))
-    # coefficients[-2] = np.zeros(len(coefficients[-2]))
-    approximation_reconstructed = wmanager_generated_signal.reconstruct_with_coefficients(coefficients[:-1])
-    approximation_reconstructed = np.zeros(len(approximation_reconstructed))
-    # print(approximation_reconstructed)
-    reconstructed_signal = wmanager_generated_signal.reconstruct_with_coefficients(
-        [approximation_reconstructed, coefficients[-1]])
-    SignalPlotter.plot_signal(generated_signal, 'generated_signal', show=False)
-    SignalPlotter.plot_signal(reconstructed_signal, 'reconstructed_signal', show=False)
+    # TODO need to create a function here that detect if there exist a transient
+    if not wmanager_generated_signal.is_transient_exist():
+        print("Transient doesn't exist")
+        exit()
 
-    # new_wmanager_reconstructed_signal = WaveletsManager(reconstructed_signal)
-    # new_coeffs = new_wmanager_reconstructed_signal.decompose(signal_extension='symmetric', wavelets_family='db4',
-    #                                                          decompose_level=3)
-    #
-    # new_wmanager_reconstructed_signal.plot_decompose_summary(pathname='new_summary', show=False)
-    #
-    # cd1 = np.asarray(coefficients[-1])
-    # cd1_abs = np.abs(cd1)
-    # cd1_ma = np.convolve(cd1_abs, np.ones(5) / 5, mode='same')
-    # max_index = np.argmax(cd1_ma)
-    # print(max_index)
-    # SignalPlotter.plot_signal(cd1_ma, 'cd1_ma', show=False)
-    #
-    # window_size = 40
-    # cutted_cd1_ma = cd1_ma[max_index - window_size:max_index + window_size]
-    # for item in np.where(cutted_cd1_ma == np.min(cutted_cd1_ma)):
-    #     print(item)
-    # print()
-    # print(np.where(cutted_cd1_ma == np.min(cutted_cd1_ma)))
+    """Reconstruction of transient only"""
+    # coefficients[0] = np.zeros(len(coefficients[0]))
+    # transient_reconstruct = wmanager_generated_signal.reconstruct(coefficients)
+    # transient_reconstruct[:transient_interval_in_time_domain[0]] = 0
+    # transient_reconstruct[transient_interval_in_time_domain[1]:] = 0
+    # SignalPlotter.plot_signal(transient_reconstruct, 'transient_reconstructed', show=False)
 
-    # for i in range(int(max_index), -1, -1):
-    #     if cd1_ma[i - 1] > cd1_ma[i]:
-    #         print(i)
-    #         break
-    #
-    # for j in range(int(max_index), len(cd1_ma)):
-    #     if cd1_ma[j + 1] > cd1_ma[j]:
-    #         print(j)
-    #         break
+    # print(transient_interval_in_time_domain)
+    # fourier_transform_before = np.abs(
+    #     (np.fft.fft(generated_signal[:transient_interval_in_time_domain[0]])))
+    # SignalPlotter.plot_dft_domain(fourier_transform_before, 'fft_before_transient', show=False)
+    # print('Hello')
 
-    # def find_closest_indices_before_after_max(max_index,)
-    # diff_signal = np.abs(reconstructed_signal - generated_signal)
-    # SignalPlotter.plot_signal(diff_signal, 'diif_signal', show=False)
-    # wmanager_generated_signal.plot_coefficients()
-    # generated_signal_reconstructed = wmanager_generated_signal.reconstruct()
+    signal_before, signal_after = wmanager_generated_signal.get_signal_before_after_transient(gap=100)
+    print(SignalSimilaritiesEstimator.allign_and_get_crosscorrleation(signal_before, signal_after))
+    print(np.sum(np.square(signal_before)))
 
-    # SignalPlotter.plot_signal(generated_signal,
-    #                           'Multi sine wave with single load transient and also single failure transient')
-
-    # SignalPlotter.plot_signal(generated_signal_reconstructed,
-    #                           'Multi sine wave with single load transient and also single failure transient')
+    SignalPlotter.plot_signal(signal_before, 'signal_before_transient', show=False)
+    SignalPlotter.plot_signal(signal_after, 'signal_after_transient', show=False)

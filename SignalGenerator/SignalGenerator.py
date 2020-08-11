@@ -1,19 +1,15 @@
+import numpy as np
+
+from MultiSignal.MultiSignal import MultiSignal
 from SignalGenerator.signal_generator_constants import (
     NUM_DRAWS_AMPLITUDES_DIFF_HARMONICS,
     MIN_SAMPLES_IN_INTERVAL_LIMITER,
     EXTRACT_AMPLITUDES_NOISE_PARAMS,
-    MIN_FAILURE_TRANS_SAMPLES,
-    MAX_FAILURE_TRANS_SAMPLES,
-    GAP_FROM_START_END_TRANS_SAMPLES,
-    MAX_DIST_IN_STANDARD_DEVIATION,
-)
+    MAX_DIST_IN_STANDARD_DEVIATION, )
 from SignalGenerator.signal_generator_exceptions import (
-    SampleRateError,
-    MissingPropertiesError
+    MissingPropertiesError, FailureTransParamsError
 )
-
-from MultiSignal.MultiSignal import MultiSignal
-import numpy as np
+from SignalGenerator.signal_generator_exceptions import SampleRateError
 
 
 class SignalGenerator:
@@ -25,8 +21,14 @@ class SignalGenerator:
         self.duration = None
         self.samples_per_second = None
         self.fail_trans_noise_params = None
+        self.fail_trans_max_samples = None
+        self.fail_trans_min_samples = None
+        self.fail_trans_gap_from_start_end_samples = None
+        self.load_trans_noise_params = None
+        self.load_trans_samples_apply_noise = None
         self._possible_frequencies = None
         self._total_num_samples = None
+        self._fail_trans_indices = None
         self._num_regular_transients = None
 
     def __str__(self):
@@ -41,7 +43,12 @@ class SignalGenerator:
                                    f'\tnoise parameters={self.noise_params}\n' + \
                                    f'\tduration={self.duration}\n' + \
                                    f'\tsamples per seconds={self.samples_per_second}\n' + \
-                                   f'\tfailure transients noise parameters={self.fail_trans_noise_params}\n'
+                                   f'\tfailure transients noise parameters={self.fail_trans_noise_params}\n' + \
+                                   f'\tload transients noise parameters={self.load_trans_noise_params}\n' + \
+                                   f'\tload transients samples to apply noise={self.load_trans_samples_apply_noise}\n' + \
+                                   f'\tfail trans max samples={self.fail_trans_max_samples}\n' + \
+                                   f'\tfail trans min samples={self.fail_trans_min_samples}\n' + \
+                                   f'\tfail trans gap from stand and end samples={self.fail_trans_gap_from_start_end_samples}\n'
 
         return assigned_properties_repr + (missing_properties_repr if missing_properties else '')
 
@@ -57,10 +64,11 @@ class SignalGenerator:
 
     def _add_failure_trans(self, signal_with_load_transients):
         # TODO maybe its smarter to determine the number of samples of the transients based on our sample rate/ #samples
-        fail_trans_indices = np.random.randint(MIN_FAILURE_TRANS_SAMPLES, MAX_FAILURE_TRANS_SAMPLES)
-        fail_trans_start_index = np.random.randint(GAP_FROM_START_END_TRANS_SAMPLES,
-                                                   self._total_num_samples - fail_trans_indices - GAP_FROM_START_END_TRANS_SAMPLES)
+        fail_trans_indices = np.random.randint(self.fail_trans_min_samples, self.fail_trans_max_samples)
+        fail_trans_start_index = np.random.randint(self.fail_trans_gap_from_start_end_samples,
+                                                   self._total_num_samples - fail_trans_indices - self.fail_trans_gap_from_start_end_samples)
         fail_trans_end_index = fail_trans_start_index + fail_trans_indices
+        self._fail_trans_indices = fail_trans_start_index, fail_trans_end_index
         self._add_noise_to_signal(signal_with_load_transients, self.fail_trans_noise_params, fail_trans_start_index,
                                   fail_trans_end_index)
 
@@ -72,11 +80,24 @@ class SignalGenerator:
         for i in range(start_index, end_index):
             signal[i] = signal[i] + np.random.normal(mean, var)
 
+    @staticmethod
+    def _add_noise_to_signal_multiple_indices(signal, noise_params, lst_start_end_indices):
+        for start_index, end_index in lst_start_end_indices:
+            SignalGenerator._add_noise_to_signal(signal, noise_params, start_index, end_index)
+
     def _create_signal_with_load_transients(self):
         lst_clean_signals = self._create_clean_signals()
         break_indices_for_load_transients = self._get_break_signal_indices()
         signal_with_load_transients = self._determine_load_transients(break_indices_for_load_transients,
                                                                       lst_clean_signals)
+        indices_to_apply_load_noise = []
+        for index in break_indices_for_load_transients:
+            indices_to_apply_load_noise.append(
+                (index - self.load_trans_samples_apply_noise, index + self.load_trans_samples_apply_noise))
+
+        SignalGenerator._add_noise_to_signal_multiple_indices(signal_with_load_transients, self.load_trans_noise_params,
+                                                              indices_to_apply_load_noise)
+
         return signal_with_load_transients
 
     def _determine_load_transients(self, break_indices_for_load_transients, lst_clean_signals):
@@ -169,8 +190,12 @@ class SignalGeneratorBuilder:
         return SignalGeneratorNoiseBuilder(self.signal_generator)
 
     @property
+    def with_load_transient_params(self):
+        return SignalGeneratorLoadTransientsBuilder(self.signal_generator)
+
+    @property
     def with_fail_transient_params(self):
-        return SignalGeneratorTransientsBuilder(self.signal_generator)
+        return SignalGeneratorFailTransientsBuilder(self.signal_generator)
 
     def build(self):
         return self.signal_generator
@@ -193,6 +218,10 @@ class SignalGeneratorBaseBuilder(SignalGeneratorBuilder):
         if self.signal_generator.num_diff_harmonics:
             self.signal_generator._possible_frequencies = [frequency * i for i in
                                                            range(1, self.signal_generator.num_diff_harmonics + 1)]
+
+        if self.signal_generator.samples_per_second:
+            if self.signal_generator.samples_per_second % frequency != 0:
+                raise SampleRateError(message='Samples per second must be a multiplication of base frequency')
         return self
 
     def num_diff_harmonics(self, num_diff_harmonics):
@@ -211,18 +240,23 @@ class SignalGeneratorSamplingBuilder(SignalGeneratorBuilder):
         self.signal_generator.duration = duration
         if self.signal_generator.samples_per_second:
             if not float(self.signal_generator.duration * self.signal_generator.samples_per_second).is_integer():
-                raise SampleRateError
+                raise SampleRateError(message='duration*samples_per_second must be an integer')
             else:
                 self.signal_generator._total_num_samples = int(duration * self.signal_generator.samples_per_second)
+
         return self
 
     def samples_per_second(self, samples_per_second):
         self.signal_generator.samples_per_second = samples_per_second
         if self.signal_generator.duration:
             if not float(self.signal_generator.duration * self.signal_generator.samples_per_second).is_integer():
-                raise SampleRateError
+                raise SampleRateError(message='duration*samples_per_second must be an integer')
             else:
                 self.signal_generator._total_num_samples = int(samples_per_second * self.signal_generator.duration)
+
+        if self.signal_generator.base_frequency:
+            if samples_per_second % self.signal_generator.base_frequency != 0:
+                raise SampleRateError(message='Samples per second must be a multiplication of base frequency')
         return self
 
 
@@ -250,7 +284,7 @@ class SignalGeneratorNoiseBuilder(SignalGeneratorBuilder):
         return self
 
 
-class SignalGeneratorTransientsBuilder(SignalGeneratorBuilder):
+class SignalGeneratorFailTransientsBuilder(SignalGeneratorBuilder):
     def __init__(self, signal_generator):
         super().__init__(signal_generator)
 
@@ -270,4 +304,51 @@ class SignalGeneratorTransientsBuilder(SignalGeneratorBuilder):
                 'var': None,
             }
         self.signal_generator.fail_trans_noise_params['var'] = var
+        return self
+
+    def max_failure_trans_samples(self, max_failure_trans_samples):
+        if self.signal_generator.fail_trans_min_samples:
+            if self.signal_generator.fail_trans_min_samples > max_failure_trans_samples:
+                raise FailureTransParamsError(
+                    message='min_failure_trans samples should be lower than max_failure_trans_samples')
+        self.signal_generator.fail_trans_max_samples = max_failure_trans_samples
+        return self
+
+    def min_failure_trans_samples(self, min_failure_trans_samples):
+        if self.signal_generator.fail_trans_max_samples:
+            if self.signal_generator.fail_trans_max_samples < min_failure_trans_samples:
+                raise FailureTransParamsError(
+                    message='min_failure_trans samples should be lower than max_failure_trans_samples')
+        self.signal_generator.fail_trans_min_samples = min_failure_trans_samples
+        return self
+
+    def gap_from_start_end_samples(self, gap_from_start_end_samples):
+        self.signal_generator.fail_trans_gap_from_start_end_samples = gap_from_start_end_samples
+        return self
+
+
+class SignalGeneratorLoadTransientsBuilder(SignalGeneratorBuilder):
+    def __init__(self, signal_generator):
+        super().__init__(signal_generator)
+
+    def mean_load_trans(self, mean):
+        if not self.signal_generator.load_trans_noise_params:
+            self.signal_generator.load_trans_noise_params = {
+                'mean': None,
+                'var': None,
+            }
+        self.signal_generator.load_trans_noise_params['mean'] = mean
+        return self
+
+    def var_load_trans(self, var):
+        if not self.signal_generator.load_trans_noise_params:
+            self.signal_generator.load_trans_noise_params = {
+                'mean': None,
+                'var': None,
+            }
+        self.signal_generator.load_trans_noise_params['var'] = var
+        return self
+
+    def samples_to_apply_noise(self, samples_to_apply_noise):
+        self.signal_generator.load_trans_samples_apply_noise = samples_to_apply_noise
         return self
