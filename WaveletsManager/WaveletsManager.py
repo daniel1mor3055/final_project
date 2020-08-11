@@ -51,7 +51,7 @@ class WaveletsManager:
     def get_available_families():
         return families()
 
-    def plot_decompose_summary(self, show=True):
+    def plot_decompose_summary(self, pathname=None, show=True):
         length = len(self.signal)
         reconstructed_signal = self.reconstruct()[:length]
 
@@ -85,7 +85,10 @@ class WaveletsManager:
         plt.xlabel('Samples')
         plt.ylabel('Amplitude')
         plt.title('Reconstructed Signal')
-        plt.savefig('summary.png')
+        if not pathname:
+            plt.savefig('summary.png')
+        else:
+            plt.savefig(f'{pathname}.png')
         if show:
             plt.show()
         else:
