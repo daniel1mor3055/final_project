@@ -6,7 +6,8 @@ from SignalSimilaritiesEstimator.SignalSimilaritiesEstimator import SignalSimila
 from WaveletsManager.WaveletsManager import WaveletsManager
 from global_constants import (
     BASE_FREQUENCY,
-    SAMPLES_PER_SECOND, TIME_DOMAIN_WINDOW_SIZE
+    SAMPLES_PER_SECOND,
+    FAIL_LOAD_CLASSIFICATION_THRESH
 )
 
 if __name__ == '__main__':
@@ -35,13 +36,13 @@ if __name__ == '__main__':
 
     counter_mistakes = 0
     # mistaken_signals = []
-    for i in range(100):
+    for i in range(1):
         generated_signal = signal_generator.generate()
         wmanager_generated_signal = WaveletsManager(generated_signal)
         coefficients = wmanager_generated_signal.decompose(signal_extension='symmetric', wavelets_family='db4',
                                                            decompose_level=1)
         wmanager_generated_signal.plot_decompose_summary(show=False)
-        # print(f'fail trans indices are:\n{signal_generator._fail_trans_indices}')
+        print(f'fail trans indices are:\n{signal_generator._fail_trans_indices}')
 
         # TODO need to create a function here that detect if there exist a transient
         if not wmanager_generated_signal.is_transient_exist():
@@ -54,22 +55,22 @@ if __name__ == '__main__':
         cross_correlation = SignalSimilaritiesEstimator.align_and_get_cross_correlation(signal_before, signal_after)
         energy_of_signal_before = np.sum(np.square(signal_before))
 
-        THRESH = 0.95
         lower, bigger = min(abs(cross_correlation), energy_of_signal_before), \
                         max(abs(cross_correlation), energy_of_signal_before)
-        if lower / bigger > THRESH:
+
+        if lower / bigger > FAIL_LOAD_CLASSIFICATION_THRESH:
             print('Fail transient')
             # mistaken_signals.append(generated_signal)
         else:
             counter_mistakes += 1
             print('Load transient')
 
+        SignalPlotter.plot_signal(signal_before, 'signal_before_transient', show=False)
+        SignalPlotter.plot_signal(signal_after, 'signal_after_transient', show=False)
+
     print(counter_mistakes)
     # for index, mistaken_signal in enumerate(mistaken_signals):
     #     SignalPlotter.plot_signal(mistaken_signal, f'mistaken_signal_index{index}', show=False)
-
-    # SignalPlotter.plot_signal(signal_before, 'signal_before_transient', show=False)
-    # SignalPlotter.plot_signal(signal_after, 'signal_after_transient', show=False)
 
     """Reconstruction of transient only"""
     # coefficients[0] = np.zeros(len(coefficients[0]))

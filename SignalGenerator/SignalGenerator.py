@@ -5,9 +5,11 @@ from SignalGenerator.signal_generator_constants import (
     NUM_DRAWS_AMPLITUDES_DIFF_HARMONICS,
     MIN_SAMPLES_IN_INTERVAL_LIMITER,
     EXTRACT_AMPLITUDES_NOISE_PARAMS,
-    MAX_DIST_IN_STANDARD_DEVIATION, )
+    MAX_DIST_IN_STANDARD_DEVIATION,
+)
 from SignalGenerator.signal_generator_exceptions import (
-    MissingPropertiesError, FailureTransParamsError
+    MissingPropertiesError,
+    FailureTransParamsError
 )
 from SignalGenerator.signal_generator_exceptions import SampleRateError
 

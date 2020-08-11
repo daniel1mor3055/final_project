@@ -8,9 +8,21 @@ from pywt import (
 )
 
 from SignalPlotter.SignalPlotter import SignalPlotter
-from WaveletsManager.wavelets_manager_constats import SIGNAL_EXTENSIONS, CSS_COLORS, TRANSIENT_DETECTOR_SENSITIVITY
-from WaveletsManager.wavelets_manager_exceptions import ReconstructionError, SignalExtensionError, WaveletFamilyError
-from global_constants import FREQ_DOMAIN_WINDOW_SIZE, TIME_DOMAIN_WINDOW_SIZE
+from WaveletsManager.wavelets_manager_constats import (
+    SIGNAL_EXTENSIONS,
+    CSS_COLORS,
+    TRANSIENT_DETECTOR_SENSITIVITY,
+    MOVING_AVG_SENSITIVITY
+)
+from WaveletsManager.wavelets_manager_exceptions import (
+    ReconstructionError,
+    SignalExtensionError,
+    WaveletFamilyError
+)
+from global_constants import (
+    FREQ_DOMAIN_WINDOW_SIZE,
+    TIME_DOMAIN_WINDOW_SIZE
+)
 
 
 class WaveletsManager:
@@ -74,7 +86,8 @@ class WaveletsManager:
     def _extract_transient_interval(self, coefficients, window_size):
         moving_average_high_freq = self._get_moving_average_high_freq(coefficients, window_size)
         transient_indices = np.where(
-            moving_average_high_freq > (np.max(moving_average_high_freq) - np.mean(moving_average_high_freq)))
+            moving_average_high_freq > np.mean(moving_average_high_freq) + MOVING_AVG_SENSITIVITY * (
+                    np.max(moving_average_high_freq) - np.mean(moving_average_high_freq)))
 
         transient_interval_in_time_domain = (transient_indices[0][0] * 2, transient_indices[0][-1] * 2)
 
