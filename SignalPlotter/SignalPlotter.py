@@ -7,10 +7,11 @@ class SignalPlotter:
         pass
 
     @staticmethod
-    def plot_signal(signal_to_plot, save_name, title='Sample Title', show=True):
-        plt.plot([i for i in range(len(signal_to_plot))], signal_to_plot)
+    def plot_signal(signal_to_plot, save_name, linewidth=None, title='Sample Title', show=True):
+        plt.figure(figsize=(30, 20))
+        plt.plot([i for i in range(len(signal_to_plot))], signal_to_plot, linewidth=linewidth)
         plt.title(title)
-        plt.savefig(save_name + '.png')
+        plt.savefig(f'{save_name}.png')
         if show:
             plt.show()
         else:
@@ -20,7 +21,7 @@ class SignalPlotter:
     def plot_dft_domain(dft, save_name, title='Dft Title', show=True):
         plt.plot(np.linspace(-np.pi, np.pi, len(dft)), dft)
         plt.title(title)
-        plt.savefig(save_name + '.png')
+        plt.savefig(f'{save_name}.png')
         if show:
             plt.show()
         else:

@@ -13,7 +13,7 @@ if __name__ == '__main__':
     # Note that the num of base_amplitudes determines the number of load transients
     signal_generator = SignalGeneratorBuilder(). \
         with_base_params. \
-        base_amplitudes([5, 4]). \
+        base_amplitudes([5]). \
         base_frequency(BASE_FREQUENCY). \
         num_diff_harmonics(10). \
         with_noise_params. \
@@ -24,18 +24,18 @@ if __name__ == '__main__':
         samples_per_second(SAMPLES_PER_SECOND). \
         with_fail_transient_params. \
         mean_fail_trans(0). \
-        var_fail_trans(0). \
+        var_fail_trans(3). \
         max_failure_trans_samples(400). \
         min_failure_trans_samples(200). \
         gap_from_start_end_samples(2000). \
         with_load_transient_params. \
         mean_load_trans(0). \
-        var_load_trans(3). \
+        var_load_trans(0.5). \
         samples_to_apply_noise(200).build()
 
     counter_mistakes = 0
-    mistaken_signals = []
-    for i in range(30):
+    # mistaken_signals = []
+    for i in range(100):
         generated_signal = signal_generator.generate()
         wmanager_generated_signal = WaveletsManager(generated_signal)
         coefficients = wmanager_generated_signal.decompose(signal_extension='symmetric', wavelets_family='db4',
@@ -59,14 +59,14 @@ if __name__ == '__main__':
                         max(abs(cross_correlation), energy_of_signal_before)
         if lower / bigger > THRESH:
             print('Fail transient')
-            counter_mistakes += 1
-            mistaken_signals.append(generated_signal)
+            # mistaken_signals.append(generated_signal)
         else:
+            counter_mistakes += 1
             print('Load transient')
 
     print(counter_mistakes)
-    for index, mistaken_signal in enumerate(mistaken_signals):
-        SignalPlotter.plot_signal(mistaken_signal, f'mistaken_signal_index{index}', show=False)
+    # for index, mistaken_signal in enumerate(mistaken_signals):
+    #     SignalPlotter.plot_signal(mistaken_signal, f'mistaken_signal_index{index}', show=False)
 
     # SignalPlotter.plot_signal(signal_before, 'signal_before_transient', show=False)
     # SignalPlotter.plot_signal(signal_after, 'signal_after_transient', show=False)

@@ -62,16 +62,17 @@ class WaveletsManager:
         abs_high_freq_coefficients = np.square(highest_freq_coefficients)
         moving_average_high_freq = np.convolve(abs_high_freq_coefficients, moving_avg_kernel, mode='same')
 
+        SignalPlotter.plot_signal(moving_average_high_freq, 'moving_average', title='Moving average', linewidth=6,
+                                  show=False)
+
         return moving_average_high_freq
 
     def is_transient_exist(self, coefficients=None, window_size=None):
         moving_average_high_freq = self._get_moving_average_high_freq(coefficients, window_size)
-        SignalPlotter.plot_signal(moving_average_high_freq, 'moving_average', show=False)
         return (np.mean(moving_average_high_freq) / np.max(moving_average_high_freq)) < TRANSIENT_DETECTOR_SENSITIVITY
 
     def _extract_transient_interval(self, coefficients, window_size):
         moving_average_high_freq = self._get_moving_average_high_freq(coefficients, window_size)
-        SignalPlotter.plot_signal(moving_average_high_freq, 'check', show=False)
         transient_indices = np.where(
             moving_average_high_freq > (np.max(moving_average_high_freq) - np.mean(moving_average_high_freq)))
 
@@ -91,7 +92,7 @@ class WaveletsManager:
 
         return signal_before, signal_after
 
-    def plot_decompose_summary(self, pathname=None, show=True):
+    def plot_decompose_summary(self, save_name=None, show=True):
         length = len(self.signal)
         reconstructed_signal = self.reconstruct()[:length]
 
@@ -125,10 +126,10 @@ class WaveletsManager:
         plt.xlabel('Samples')
         plt.ylabel('Amplitude')
         plt.title('Reconstructed Signal')
-        if not pathname:
+        if not save_name:
             plt.savefig('summary.png')
         else:
-            plt.savefig(f'{pathname}.png')
+            plt.savefig(f'{save_name}.png')
         if show:
             plt.show()
         else:
