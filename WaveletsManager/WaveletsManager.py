@@ -57,7 +57,7 @@ class WaveletsManager:
         window_size = window_size or FREQ_DOMAIN_WINDOW_SIZE
 
         highest_freq_coefficients = coefficients[-1]
-        moving_avg_kernel = np.ones(window_size)
+        moving_avg_kernel = np.ones(window_size) / window_size
 
         abs_high_freq_coefficients = np.square(highest_freq_coefficients)
         moving_average_high_freq = np.convolve(abs_high_freq_coefficients, moving_avg_kernel, mode='same')
@@ -66,6 +66,7 @@ class WaveletsManager:
 
     def is_transient_exist(self, coefficients=None, window_size=None):
         moving_average_high_freq = self._get_moving_average_high_freq(coefficients, window_size)
+        SignalPlotter.plot_signal(moving_average_high_freq, 'moving_average', show=False)
         return (np.mean(moving_average_high_freq) / np.max(moving_average_high_freq)) < TRANSIENT_DETECTOR_SENSITIVITY
 
     def _extract_transient_interval(self, coefficients, window_size):
@@ -78,15 +79,15 @@ class WaveletsManager:
 
         return transient_interval_in_time_domain
 
-    def get_signal_before_after_transient(self, gap, coefficients=None, window_size=None):
+    def get_signal_before_after_transient(self, gap_from_transient, coefficients=None, window_size=None):
         transient_interval_in_time_domain = self._extract_transient_interval(coefficients, window_size)
-        print(f'extracted fail trans indices:\n{transient_interval_in_time_domain}')
+        print(f'extracted trans indices:\n{transient_interval_in_time_domain}')
         signal_before = self.signal[
-                        transient_interval_in_time_domain[0] - gap - TIME_DOMAIN_WINDOW_SIZE:
-                        transient_interval_in_time_domain[0] - gap]
+                        transient_interval_in_time_domain[0] - gap_from_transient - TIME_DOMAIN_WINDOW_SIZE:
+                        transient_interval_in_time_domain[0] - gap_from_transient]
         signal_after = self.signal[
-                       transient_interval_in_time_domain[1] + gap:
-                       transient_interval_in_time_domain[1] + gap + TIME_DOMAIN_WINDOW_SIZE]
+                       transient_interval_in_time_domain[1] + gap_from_transient:
+                       transient_interval_in_time_domain[1] + gap_from_transient + TIME_DOMAIN_WINDOW_SIZE]
 
         return signal_before, signal_after
 

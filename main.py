@@ -6,14 +6,14 @@ from SignalSimilaritiesEstimator.SignalSimilaritiesEstimator import SignalSimila
 from WaveletsManager.WaveletsManager import WaveletsManager
 from global_constants import (
     BASE_FREQUENCY,
-    SAMPLES_PER_SECOND
+    SAMPLES_PER_SECOND, TIME_DOMAIN_WINDOW_SIZE
 )
 
 if __name__ == '__main__':
     # Note that the num of base_amplitudes determines the number of load transients
     signal_generator = SignalGeneratorBuilder(). \
         with_base_params. \
-        base_amplitudes([5, 3]). \
+        base_amplitudes([5, 4]). \
         base_frequency(BASE_FREQUENCY). \
         num_diff_harmonics(10). \
         with_noise_params. \
@@ -24,26 +24,52 @@ if __name__ == '__main__':
         samples_per_second(SAMPLES_PER_SECOND). \
         with_fail_transient_params. \
         mean_fail_trans(0). \
-        var_fail_trans(0.5). \
+        var_fail_trans(0). \
         max_failure_trans_samples(400). \
         min_failure_trans_samples(200). \
-        gap_from_start_end_samples(200). \
+        gap_from_start_end_samples(2000). \
         with_load_transient_params. \
         mean_load_trans(0). \
         var_load_trans(3). \
         samples_to_apply_noise(200).build()
 
-    generated_signal = signal_generator.generate()
-    wmanager_generated_signal = WaveletsManager(generated_signal)
-    coefficients = wmanager_generated_signal.decompose(signal_extension='symmetric', wavelets_family='db4',
-                                                       decompose_level=1)
-    wmanager_generated_signal.plot_decompose_summary(show=False)
-    print(f'fail trans indices are:\n{signal_generator._fail_trans_indices}')
+    counter_mistakes = 0
+    mistaken_signals = []
+    for i in range(30):
+        generated_signal = signal_generator.generate()
+        wmanager_generated_signal = WaveletsManager(generated_signal)
+        coefficients = wmanager_generated_signal.decompose(signal_extension='symmetric', wavelets_family='db4',
+                                                           decompose_level=1)
+        wmanager_generated_signal.plot_decompose_summary(show=False)
+        # print(f'fail trans indices are:\n{signal_generator._fail_trans_indices}')
 
-    # TODO need to create a function here that detect if there exist a transient
-    if not wmanager_generated_signal.is_transient_exist():
-        print("Transient doesn't exist")
-        exit()
+        # TODO need to create a function here that detect if there exist a transient
+        if not wmanager_generated_signal.is_transient_exist():
+            print("Transient doesn't exist")
+            exit()
+
+        signal_before, signal_after = wmanager_generated_signal.get_signal_before_after_transient(
+            gap_from_transient=100)
+
+        cross_correlation = SignalSimilaritiesEstimator.align_and_get_cross_correlation(signal_before, signal_after)
+        energy_of_signal_before = np.sum(np.square(signal_before))
+
+        THRESH = 0.95
+        lower, bigger = min(abs(cross_correlation), energy_of_signal_before), \
+                        max(abs(cross_correlation), energy_of_signal_before)
+        if lower / bigger > THRESH:
+            print('Fail transient')
+            counter_mistakes += 1
+            mistaken_signals.append(generated_signal)
+        else:
+            print('Load transient')
+
+    print(counter_mistakes)
+    for index, mistaken_signal in enumerate(mistaken_signals):
+        SignalPlotter.plot_signal(mistaken_signal, f'mistaken_signal_index{index}', show=False)
+
+    # SignalPlotter.plot_signal(signal_before, 'signal_before_transient', show=False)
+    # SignalPlotter.plot_signal(signal_after, 'signal_after_transient', show=False)
 
     """Reconstruction of transient only"""
     # coefficients[0] = np.zeros(len(coefficients[0]))
@@ -57,10 +83,3 @@ if __name__ == '__main__':
     #     (np.fft.fft(generated_signal[:transient_interval_in_time_domain[0]])))
     # SignalPlotter.plot_dft_domain(fourier_transform_before, 'fft_before_transient', show=False)
     # print('Hello')
-
-    signal_before, signal_after = wmanager_generated_signal.get_signal_before_after_transient(gap=100)
-    print(SignalSimilaritiesEstimator.allign_and_get_crosscorrleation(signal_before, signal_after))
-    print(np.sum(np.square(signal_before)))
-
-    SignalPlotter.plot_signal(signal_before, 'signal_before_transient', show=False)
-    SignalPlotter.plot_signal(signal_after, 'signal_after_transient', show=False)

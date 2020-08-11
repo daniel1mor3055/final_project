@@ -5,7 +5,7 @@ from global_constants import TIME_DOMAIN_WINDOW_SIZE
 
 class SignalSimilaritiesEstimator:
     @staticmethod
-    def allign_and_get_crosscorrleation(signal_a, signal_b):
+    def align_and_get_cross_correlation(signal_a, signal_b):
         rolled_signal = signal_b
         max_correlation_results = []
         for i in range(TIME_DOMAIN_WINDOW_SIZE):
