@@ -10,7 +10,7 @@ from pywt import (
 from SignalPlotter.SignalPlotter import SignalPlotter
 from WaveletsManager.wavelets_manager_constats import (
     SIGNAL_EXTENSIONS,
-    CSS_COLORS,
+    CSS_COLORS2,
     TRANSIENT_DETECTOR_SENSITIVITY,
     MOVING_AVG_SENSITIVITY
 )
@@ -74,8 +74,8 @@ class WaveletsManager:
         abs_high_freq_coefficients = np.square(highest_freq_coefficients)
         moving_average_high_freq = np.convolve(abs_high_freq_coefficients, moving_avg_kernel, mode='same')
 
-        SignalPlotter.plot_signal(moving_average_high_freq, 'moving_average', title='Moving average', linewidth=6,
-                                  show=False)
+        SignalPlotter.plot_signal(moving_average_high_freq, 'moving_average', title='Moving average', color=CSS_COLORS2[1],
+                                  linewidth=6, show=False)
 
         return moving_average_high_freq
 
@@ -113,29 +113,30 @@ class WaveletsManager:
         num_plots = self.decompose_level + 3
 
         plt.figure(figsize=(30, 20))
+        plt.style.use('dark_background')
 
         # 3 here is because we also with to plot cA,Original Signal, Reconstructed Signal
         plt.subplot(num_plots, 1, 1)
-        plt.plot(x_values, self.signal, color=CSS_COLORS[0])
+        plt.plot(x_values, self.signal, color=CSS_COLORS2[0])
         plt.xlabel('Samples')
         plt.ylabel('Amplitude')
         plt.title('Original Signal')
 
         plt.subplot(num_plots, 1, 2)
-        plt.plot(self.coefficients[0], color=CSS_COLORS[1])
+        plt.plot(self.coefficients[0], color=CSS_COLORS2[1])
         plt.xlabel('Samples')
         plt.ylabel('cA')
         # plt.title('Approximation Coeff. (cA)')
 
         for i in range(2, self.decompose_level + 2):
             plt.subplot(num_plots, 1, i + 1)
-            plt.plot(self.coefficients[i - 1], color=CSS_COLORS[i % len(CSS_COLORS)])
+            plt.plot(self.coefficients[i - 1], color=CSS_COLORS2[i % len(CSS_COLORS2)])
             plt.xlabel('Samples')
             plt.ylabel(f'cD - level {self.decompose_level - (i - 2)}')
             # plt.title('Detailed Coeff. (cD)')
 
         plt.subplot(num_plots, 1, num_plots)
-        plt.plot(x_values, reconstructed_signal, color=CSS_COLORS[(i + 1) % len(CSS_COLORS)])
+        plt.plot(x_values, reconstructed_signal, color=CSS_COLORS2[(i + 1) % len(CSS_COLORS2)])
         plt.xlabel('Samples')
         plt.ylabel('Amplitude')
         plt.title('Reconstructed Signal')

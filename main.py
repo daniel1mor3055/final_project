@@ -12,11 +12,14 @@ from global_constants import (
 
 if __name__ == '__main__':
     # Note that the num of base_amplitudes determines the number of load transients
+    # TODO add shuffling to harmonics
+    # Even harmonics are much lower than odd harmonics in most cases
+    # TODO support more than one transient
     signal_generator = SignalGeneratorBuilder(). \
         with_base_params. \
         base_amplitudes([5]). \
         base_frequency(BASE_FREQUENCY). \
-        num_diff_harmonics(10). \
+        num_diff_harmonics(2). \
         with_noise_params. \
         mean(0). \
         var(0.5). \
