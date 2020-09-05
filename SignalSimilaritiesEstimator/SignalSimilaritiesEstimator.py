@@ -13,5 +13,4 @@ class SignalSimilaritiesEstimator:
             corrleation = np.correlate(signal_a, rolled_signal, 'full')
             max_correlation_results.append(np.max(corrleation))
 
-        # return np.argmax(np.asarray(max_correlation_results)),np.max(np.asarray(max_correlation_results))
         return np.max(np.asarray(max_correlation_results))

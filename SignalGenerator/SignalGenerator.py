@@ -1,4 +1,5 @@
 import numpy as np
+import random
 
 from MultiSignal.MultiSignal import MultiSignal
 from SignalGenerator.signal_generator_constants import (
@@ -22,6 +23,8 @@ class SignalGenerator:
         self.noise_params = None
         self.duration = None
         self.samples_per_second = None
+        self.num_fail_trans = None
+        self.min_gap_between_fail_trans = None
         self.fail_trans_noise_params = None
         self.fail_trans_max_samples = None
         self.fail_trans_min_samples = None
@@ -30,7 +33,7 @@ class SignalGenerator:
         self.load_trans_samples_apply_noise = None
         self._possible_frequencies = None
         self._total_num_samples = None
-        self._fail_trans_indices = None
+        self._fail_trans_intervals = None
         self._num_regular_transients = None
 
     def __str__(self):
@@ -45,12 +48,14 @@ class SignalGenerator:
                                    f'\tnoise parameters={self.noise_params}\n' + \
                                    f'\tduration={self.duration}\n' + \
                                    f'\tsamples per seconds={self.samples_per_second}\n' + \
+                                   f'\tnum failure transients={self.num_fail_trans}\n' + \
+                                   f'\tmin gap between fail transients={self.min_gap_between_fail_trans}\n' + \
                                    f'\tfailure transients noise parameters={self.fail_trans_noise_params}\n' + \
-                                   f'\tload transients noise parameters={self.load_trans_noise_params}\n' + \
-                                   f'\tload transients samples to apply noise={self.load_trans_samples_apply_noise}\n' + \
                                    f'\tfail trans max samples={self.fail_trans_max_samples}\n' + \
                                    f'\tfail trans min samples={self.fail_trans_min_samples}\n' + \
-                                   f'\tfail trans gap from stand and end samples={self.fail_trans_gap_from_start_end_samples}\n'
+                                   f'\tfail trans gap from stand and end samples={self.fail_trans_gap_from_start_end_samples}\n' + \
+                                   f'\tload transients noise parameters={self.load_trans_noise_params}\n' + \
+                                   f'\tload transients samples to apply noise={self.load_trans_samples_apply_noise}\n'
 
         return assigned_properties_repr + (missing_properties_repr if missing_properties else '')
 
@@ -64,15 +69,41 @@ class SignalGenerator:
         self._add_failure_trans(generated_signal)
         return generated_signal
 
+    def _validate_fail_trans_locations(self, fail_trans_start_indices, fail_trans_end_indices):
+        fail_transients_intervals = [(start_index, end_index) for start_index, end_index in
+                                     zip(fail_trans_start_indices, fail_trans_end_indices)]
+        fail_transients_intervals.sort(key=lambda tup: tup[0])
+        for i in range(1, len(fail_transients_intervals)):
+            curr_interval_start_index, curr_interval_end_index = fail_transients_intervals[i]
+            prev_interval_start_index, prev_interval_end_index = fail_transients_intervals[i - 1]
+            if curr_interval_start_index > prev_interval_end_index + self.min_gap_between_fail_trans:
+                continue
+            return False
+
+        return True
+
     def _add_failure_trans(self, signal_with_load_transients):
         # TODO maybe its smarter to determine the number of samples of the transients based on our sample rate/ #samples
-        fail_trans_indices = np.random.randint(self.fail_trans_min_samples, self.fail_trans_max_samples)
-        fail_trans_start_index = np.random.randint(self.fail_trans_gap_from_start_end_samples,
-                                                   self._total_num_samples - fail_trans_indices - self.fail_trans_gap_from_start_end_samples)
-        fail_trans_end_index = fail_trans_start_index + fail_trans_indices
-        self._fail_trans_indices = fail_trans_start_index, fail_trans_end_index
-        self._add_noise_to_signal(signal_with_load_transients, self.fail_trans_noise_params, fail_trans_start_index,
-                                  fail_trans_end_index)
+        valid_choice = False
+        fail_trans_start_indices, fail_trans_end_indices = None, None
+        while not valid_choice:
+            fail_trans_num_samples = np.random.randint(self.fail_trans_min_samples, self.fail_trans_max_samples,
+                                                       size=self.num_fail_trans)
+
+            earliest_possible_start, latest_possible_end = self.fail_trans_gap_from_start_end_samples, \
+                                                           self._total_num_samples - fail_trans_num_samples - self.fail_trans_gap_from_start_end_samples
+
+            fail_trans_start_indices = np.random.randint(earliest_possible_start, latest_possible_end,
+                                                         size=self.num_fail_trans)
+
+            fail_trans_end_indices = fail_trans_start_indices + fail_trans_num_samples
+
+            valid_choice = self._validate_fail_trans_locations(fail_trans_start_indices, fail_trans_end_indices)
+
+        self._fail_trans_intervals = sorted(list(zip(fail_trans_start_indices, fail_trans_end_indices)),
+                                            key=lambda tup: tup[0])
+        for start_index, end_index in self._fail_trans_intervals:
+            self._add_noise_to_signal(signal_with_load_transients, self.fail_trans_noise_params, start_index, end_index)
 
     @staticmethod
     def _add_noise_to_signal(signal, noise_params, start_index=None, end_index=None):
@@ -161,6 +192,10 @@ class SignalGenerator:
         count_base_amplitude = counts_different_harmonics[0]
         amplitudes_diff_harmonics = [count * self.base_amplitudes[signal_index] / count_base_amplitude for count in
                                      counts_different_harmonics]
+
+        tail_copy = amplitudes_diff_harmonics[1:]
+        random.shuffle(tail_copy)
+        amplitudes_diff_harmonics[1:] = tail_copy
 
         return amplitudes_diff_harmonics
 
@@ -289,6 +324,14 @@ class SignalGeneratorNoiseBuilder(SignalGeneratorBuilder):
 class SignalGeneratorFailTransientsBuilder(SignalGeneratorBuilder):
     def __init__(self, signal_generator):
         super().__init__(signal_generator)
+
+    def min_gap_between_fail_trans(self, min_gap):
+        self.signal_generator.min_gap_between_fail_trans = min_gap
+        return self
+
+    def num_fail_trans(self, num_fail_trans):
+        self.signal_generator.num_fail_trans = num_fail_trans
+        return self
 
     def mean_fail_trans(self, mean):
         if not self.signal_generator.fail_trans_noise_params:
