@@ -5,10 +5,8 @@ from WaveletsManager.WaveletsManager import WaveletsManager
 from global_constants import (
     BASE_FREQUENCY,
     SAMPLES_PER_SECOND,
-    FREQ_DOMAIN_WINDOW_SIZE, RESULTS_NAME
+    FREQ_DOMAIN_WINDOW_SIZE
 )
-
-import matplotlib.pyplot as plt
 
 if __name__ == '__main__':
     # Note that the num of base_amplitudes determines the number of load transients
@@ -17,7 +15,7 @@ if __name__ == '__main__':
     # TODO extract period of signal
     signal_generator = SignalGeneratorBuilder(). \
         with_base_params. \
-        base_amplitudes([5, 3]). \
+        base_amplitudes([5]). \
         base_frequency(BASE_FREQUENCY). \
         num_diff_harmonics(10). \
         with_noise_params. \
@@ -36,46 +34,30 @@ if __name__ == '__main__':
         gap_from_start_end_samples(2000). \
         with_load_transient_params. \
         mean_load_trans(0). \
-        var_load_trans(3). \
+        var_load_trans(0). \
         samples_to_apply_noise(200).build()
 
     signal_extension = 'symmetric'
     wavelets_family = 'db4'
     decompose_level = 1
-    wmanager_generated_signal = WaveletsManager()
 
     generated_signal = signal_generator.generate()
-    # SignalPlotter.plot_signal(generated_signal, 'signal_without_transients',
-    #                           title='Signal Without Transients', show=False)
 
-    coefficients = wmanager_generated_signal.decompose(signal=generated_signal, signal_extension=signal_extension,
-                                                       wavelets_family=wavelets_family, decompose_level=decompose_level)
-    wmanager_generated_signal.plot_decompose_summary(signal=generated_signal, coefficients=coefficients,
-                                                     decompose_level=decompose_level, wavelets_family=wavelets_family,
-                                                     signal_extension=signal_extension, show=False)
+    coefficients = WaveletsManager.decompose(signal=generated_signal, signal_extension=signal_extension,
+                                             wavelets_family=wavelets_family, decompose_level=decompose_level)
+
+    moving_average, transients = TransientsAnalyzer.analyze(signal=generated_signal, coefficients=coefficients,
+                                                            window_size=FREQ_DOMAIN_WINDOW_SIZE)
+
+    SignalPlotter.plot_decompose_summary(signal=generated_signal, coefficients=coefficients,
+                                         decompose_level=decompose_level, wavelets_family=wavelets_family,
+                                         moving_average=moving_average, signal_extension=signal_extension,
+                                         transients=transients, show=False)
 
     print(signal_generator._fail_trans_intervals)
-    transients = TransientsAnalyzer.analyze(signal=generated_signal, coefficients=coefficients,
-                                            window_size=FREQ_DOMAIN_WINDOW_SIZE)
 
     for transient in transients:
         print(transient)
-
-    starts_ends = []
-    for transient in transients:
-        starts_ends += [transient.indices[0], transient.indices[1]]
-
-    ticks = []
-    for transient in transients:
-        ticks += ['start\nfail', 'end\nfail'] if transient.type == 'Fail Transient' else ['start\nload', 'end\nload']
-
-    title = RESULTS_NAME
-    plt.figure(figsize=(100, 20))
-    plt.plot(generated_signal)
-    plt.xticks(starts_ends, ticks)
-    plt.title(title)
-    plt.savefig(title)
-    plt.show()
 
     """Reconstruction of transient only"""
     # coefficients[0] = np.zeros(len(coefficients[0]))

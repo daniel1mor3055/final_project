@@ -9,7 +9,7 @@ from WaveletsManager.wavelets_manager_constats import (
 )
 from global_constants import (
     FREQ_DOMAIN_WINDOW_SIZE,
-    TIME_DOMAIN_WINDOW_SIZE, FAIL_LOAD_CLASSIFICATION_THRESH, RESULTS_NAME
+    TIME_DOMAIN_WINDOW_SIZE, FAIL_LOAD_CLASSIFICATION_THRESH, TRIAL_NAME
 )
 
 
@@ -28,10 +28,10 @@ class TransientsAnalyzer:
         moving_average_high_freq = np.convolve(abs_high_freq_coefficients, moving_avg_kernel, mode='same')
 
         # TODO-need to be remove
-        SignalPlotter.plot_signal(moving_average_high_freq, f'{RESULTS_NAME}_moving_average',
-                                  title=f'{RESULTS_NAME}_Moving Average',
-                                  color=CSS_COLORS[1],
-                                  linewidth=6, show=False)
+        # SignalPlotter.plot_signal(moving_average_high_freq, f'{TRIAL_NAME}_moving_average',
+        #                           title=f'{TRIAL_NAME}_Moving Average',
+        #                           color=CSS_COLORS[1],
+        #                           linewidth=6, show=False)
 
         return moving_average_high_freq
 
@@ -61,7 +61,7 @@ class TransientsAnalyzer:
 
         transients_intervals_in_time_domain = TransientsAnalyzer._extract_transients_intervals(bool_transients_indices)
 
-        return transients_intervals_in_time_domain
+        return moving_average_high_freq, transients_intervals_in_time_domain
 
     @staticmethod
     def _get_signal_before_after_transients(signal, gap_from_transient, transients_intervals_in_time_domain):
@@ -81,7 +81,8 @@ class TransientsAnalyzer:
     @staticmethod
     def analyze(signal, coefficients, window_size=None):
         transients = list()
-        transients_intervals_in_time_domain = TransientsAnalyzer._extract_transients(coefficients, window_size)
+        moving_average_high_freq, transients_intervals_in_time_domain = TransientsAnalyzer._extract_transients(
+            coefficients, window_size)
         signals_before_transients, signals_after_transients = \
             TransientsAnalyzer._get_signal_before_after_transients(signal=signal, gap_from_transient=0,
                                                                    transients_intervals_in_time_domain=transients_intervals_in_time_domain)
@@ -101,4 +102,4 @@ class TransientsAnalyzer:
             else:
                 transients.append(Transient(indices=transients_intervals_in_time_domain[index], type='Load Transient'))
 
-        return transients
+        return moving_average_high_freq, transients
