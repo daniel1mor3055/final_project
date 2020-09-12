@@ -57,8 +57,7 @@ class SignalPlotter:
         x_values = np.arange(length)
         num_plots = decompose_level + 4
 
-        fig = plt.figure(figsize=(30, 20))
-        fig.tight_layout(pad=10.0)
+        plt.figure(figsize=(30, 20))
 
         # 3 here is because we also with to plot cA,Original Signal, Reconstructed Signal
         plt.subplot(num_plots, 1, 1)
