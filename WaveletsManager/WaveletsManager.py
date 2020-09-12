@@ -70,7 +70,7 @@ class WaveletsManager:
         plt.ylabel('Amplitude')
         plt.title('Reconstructed Signal')
         if not save_name:
-            plt.savefig('summary.png')
+            plt.savefig(f'{RESULTS_NAME}_summary.png')
         else:
             plt.savefig(f'{save_name}.png')
         if show:

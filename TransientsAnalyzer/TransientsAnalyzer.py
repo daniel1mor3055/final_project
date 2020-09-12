@@ -9,7 +9,7 @@ from WaveletsManager.wavelets_manager_constats import (
 )
 from global_constants import (
     FREQ_DOMAIN_WINDOW_SIZE,
-    TIME_DOMAIN_WINDOW_SIZE, FAIL_LOAD_CLASSIFICATION_THRESH
+    TIME_DOMAIN_WINDOW_SIZE, FAIL_LOAD_CLASSIFICATION_THRESH, RESULTS_NAME
 )
 
 
@@ -28,7 +28,8 @@ class TransientsAnalyzer:
         moving_average_high_freq = np.convolve(abs_high_freq_coefficients, moving_avg_kernel, mode='same')
 
         # TODO-need to be remove
-        SignalPlotter.plot_signal(moving_average_high_freq, 'moving_average', title='Moving average',
+        SignalPlotter.plot_signal(moving_average_high_freq, f'{RESULTS_NAME}_moving_average',
+                                  title=f'{RESULTS_NAME}_Moving Average',
                                   color=CSS_COLORS[1],
                                   linewidth=6, show=False)
 
