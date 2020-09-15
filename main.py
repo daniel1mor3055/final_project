@@ -25,12 +25,12 @@ if __name__ == '__main__':
         duration(1). \
         samples_per_second(SAMPLES_PER_SECOND). \
         with_fail_transient_params. \
-        min_gap_between_fail_trans(0). \
-        num_fail_trans(2). \
+        min_gap_between_fail_trans(500). \
+        num_fail_trans(1). \
         mean_fail_trans(0). \
         var_fail_trans(3). \
         max_failure_trans_samples(1000). \
-        min_failure_trans_samples(200). \
+        min_failure_trans_samples(500). \
         gap_from_start_end_samples(2000). \
         with_load_transient_params. \
         mean_load_trans(0). \
@@ -42,6 +42,8 @@ if __name__ == '__main__':
     decompose_level = 1
 
     generated_signal = signal_generator.generate()
+
+    print(f'True transients intervals are:\n{signal_generator._fail_trans_intervals}')
 
     coefficients = WaveletsManager.decompose(signal=generated_signal, signal_extension=signal_extension,
                                              wavelets_family=wavelets_family, decompose_level=decompose_level)
@@ -55,14 +57,5 @@ if __name__ == '__main__':
                                          moving_average=moving_average, signal_extension=signal_extension,
                                          transients=transients, show=False)
 
-    print(signal_generator._fail_trans_intervals)
-
     for transient in transients:
         print(transient)
-
-    """Reconstruction of transient only"""
-    # coefficients[0] = np.zeros(len(coefficients[0]))
-    # transient_reconstruct = wmanager_generated_signal.reconstruct(coefficients)
-    # transient_reconstruct[:transient_interval_in_time_domain[0]] = 0
-    # transient_reconstruct[transient_interval_in_time_domain[1]:] = 0
-    # SignalPlotter.plot_signal(transient_reconstruct, 'transient_reconstructed', show=False)

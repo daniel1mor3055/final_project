@@ -68,7 +68,7 @@ class TransientsAnalyzer:
     def _get_signal_before_after_transients(signal, gap_from_transient, transients_intervals_in_time_domain):
         signals_before_transients = list()
         signals_after_transients = list()
-        print(f'extracted trans indices:\n{transients_intervals_in_time_domain}')
+        print(f'Extracted trans indices:\n{transients_intervals_in_time_domain}')
         for interval in transients_intervals_in_time_domain:
             signal_before = signal[
                             interval[0] - gap_from_transient - TIME_DOMAIN_WINDOW_SIZE:interval[0] - gap_from_transient]
