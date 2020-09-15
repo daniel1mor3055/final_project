@@ -2,7 +2,8 @@ import numpy as np
 
 from SignalPlotter.SignalPlotter import SignalPlotter
 from SignalSimilaritiesEstimator.SignalSimilaritiesEstimator import SignalSimilaritiesEstimator
-from Transient.Transient import Transient
+from Transient.Transient import Transient, FailTransient, LoadTransient
+from WaveletsManager.WaveletsManager import WaveletsManager
 from WaveletsManager.wavelets_manager_constats import (
     CSS_COLORS,
     MOVING_AVG_THRESH
@@ -79,10 +80,22 @@ class TransientsAnalyzer:
         return signals_before_transients, signals_after_transients
 
     @staticmethod
-    def analyze(signal, coefficients, window_size=None):
+    def _get_reconstrcuted_transient(coefficients, wavelets_family, transient_intervals_in_time_domain):
+        current_transient_start, current_transient_finish = transient_intervals_in_time_domain
+        new_coeffs = [[], []]
+
+        new_coeffs[-1] = coefficients[-1][current_transient_start // 2:current_transient_finish // 2]
+        new_coeffs[0] = np.zeros(len(new_coeffs[1]))
+
+        reconstructed_transient = WaveletsManager.reconstruct(coefficients=new_coeffs, wavelets_family=wavelets_family)
+        return reconstructed_transient
+
+    @staticmethod
+    def analyze(signal, coefficients, wavelets_family, window_size=None):
         transients = list()
         moving_average_high_freq, transients_intervals_in_time_domain = TransientsAnalyzer._extract_transients(
             coefficients, window_size)
+
         signals_before_transients, signals_after_transients = \
             TransientsAnalyzer._get_signal_before_after_transients(signal=signal, gap_from_transient=0,
                                                                    transients_intervals_in_time_domain=transients_intervals_in_time_domain)
@@ -94,12 +107,16 @@ class TransientsAnalyzer:
             lower, bigger = min(abs(cross_correlation), energy_of_signal_before), \
                             max(abs(cross_correlation), energy_of_signal_before)
 
-            SignalPlotter.plot_signal(before_signal, f'before_signal_transient_{index}', show=False)
-            SignalPlotter.plot_signal(after_signal, f'after_signal_transient_{index}', show=False)
-
             if lower / bigger > FAIL_LOAD_CLASSIFICATION_THRESH:
-                transients.append(Transient(indices=transients_intervals_in_time_domain[index], type='Fail Transient'))
+                reconstructed_transient = \
+                    TransientsAnalyzer._get_reconstrcuted_transient(coefficients=coefficients,
+                                                                    wavelets_family=wavelets_family,
+                                                                    transient_intervals_in_time_domain=
+                                                                    transients_intervals_in_time_domain[index])
+                transients.append(
+                    FailTransient(indices=transients_intervals_in_time_domain[index],
+                                  time_domain_samples=reconstructed_transient))
             else:
-                transients.append(Transient(indices=transients_intervals_in_time_domain[index], type='Load Transient'))
+                transients.append(LoadTransient(indices=transients_intervals_in_time_domain[index]))
 
         return moving_average_high_freq, transients

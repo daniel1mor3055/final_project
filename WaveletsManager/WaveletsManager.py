@@ -26,5 +26,5 @@ class WaveletsManager:
         return coefficients
 
     @staticmethod
-    def reconstruct(coefficients, wavelets_family, signal_extension):
+    def reconstruct(coefficients, wavelets_family, signal_extension='symmetric'):
         return waverec(coeffs=coefficients, wavelet=wavelets_family, mode=signal_extension)

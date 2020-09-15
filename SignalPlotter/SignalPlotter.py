@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
+from Transient.Transient import FailTransient
 from WaveletsManager.WaveletsManager import WaveletsManager
 from WaveletsManager.wavelets_manager_constats import CSS_COLORS
 from global_constants import TRIAL_NAME
@@ -40,8 +41,8 @@ class SignalPlotter:
 
         ticks = []
         for transient in transients:
-            ticks += ['start\nfail', 'end\nfail'] if transient.type == 'Fail Transient' else ['start\nload',
-                                                                                              'end\nload']
+            ticks += ['start\nfail', 'end\nfail'] if isinstance(transient, FailTransient) else ['start\nload',
+                                                                                                'end\nload']
 
         return starts_ends, ticks
 

@@ -25,11 +25,11 @@ if __name__ == '__main__':
         duration(1). \
         samples_per_second(SAMPLES_PER_SECOND). \
         with_fail_transient_params. \
-        min_gap_between_fail_trans(500). \
-        num_fail_trans(1). \
+        min_gap_between_fail_trans(0). \
+        num_fail_trans(2). \
         mean_fail_trans(0). \
         var_fail_trans(3). \
-        max_failure_trans_samples(400). \
+        max_failure_trans_samples(1000). \
         min_failure_trans_samples(200). \
         gap_from_start_end_samples(2000). \
         with_load_transient_params. \
@@ -47,7 +47,8 @@ if __name__ == '__main__':
                                              wavelets_family=wavelets_family, decompose_level=decompose_level)
 
     moving_average, transients = TransientsAnalyzer.analyze(signal=generated_signal, coefficients=coefficients,
-                                                            window_size=FREQ_DOMAIN_WINDOW_SIZE)
+                                                            window_size=FREQ_DOMAIN_WINDOW_SIZE,
+                                                            wavelets_family=wavelets_family)
 
     SignalPlotter.plot_decompose_summary(signal=generated_signal, coefficients=coefficients,
                                          decompose_level=decompose_level, wavelets_family=wavelets_family,
@@ -65,8 +66,3 @@ if __name__ == '__main__':
     # transient_reconstruct[:transient_interval_in_time_domain[0]] = 0
     # transient_reconstruct[transient_interval_in_time_domain[1]:] = 0
     # SignalPlotter.plot_signal(transient_reconstruct, 'transient_reconstructed', show=False)
-
-    # print(transient_interval_in_time_domain)
-    # fourier_transform_before = np.abs(
-    #     (np.fft.fft(generated_signal[:transient_interval_in_time_domain[0]])))
-    # SignalPlotter.plot_dft_domain(fourier_transform_before, 'fft_before_transient', show=False)
